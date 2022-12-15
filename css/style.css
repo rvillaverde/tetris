@@ -1,12 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap');
 
 * {
-  box-sizing: border-box;
   --black: #212529;
   --medium-gray: #adb5bd;
   --light-gray: #dee2e6;
   --lighter-gray: #e9ecef;
   --white: #f8f9fa;
+
+  --color-1: #264653;
+  --color-2: #2a9d8f;
+  --color-3: #e9c46a;
+  --color-4: #f4a261;
+  --color-5: #e76f51;
+
+  --point-size: max(28px, 80vh/20);
+
+  box-sizing: border-box;
 }
 
 body {
@@ -64,20 +73,14 @@ h1 {
   margin: 0;
 }
 
-.pieces-container {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-}
-
-.piece {
-  display: grid;
-}
-
 .tetris-container {
   display: flex;
   justify-content: center;
   padding: 24px;
+}
+
+.tetris {
+  border: 2px solid var(--medium-gray);
 }
 
 .tetris > * {
@@ -101,4 +104,8 @@ h1 {
 
 .tetris .background .box {
   border: 1px solid var(--lighter-gray);
+}
+
+.figure {
+  display: grid;
 }

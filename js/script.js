@@ -1,23 +1,22 @@
-const COLORS = ["#264653", "#2a9d8f", "#e9c46a", "#f4a261", "#e76f51"];
+const COLORS = ["color-1", "color-2", "color-3", "color-4", "color-5"];
 
-const POINT_SIZE = "24px";
+const POINT_SIZE = "var(--point-size)";
 const INTERVAL = 750;
 
-class Style {
+class CssStyle {
   constructor(style) {
     this.style = style;
   }
-}
 
-Style.prototype.toString = function () {
-  return Object.keys(this.style)
-    .map((k) => `${k}: ${this.style[k]};`)
-    .join("");
-};
+  toString = () =>
+    Object.keys(this.style)
+      .map((k) => `${k}: ${this.style[k]};`)
+      .join("");
+}
 
 class Tetris {
   constructor(width, height) {
-    if (width === undefined || height === undefined) {
+    if (!defined(width, height)) {
       throw new Error("Undefined value for width or height.");
     }
 
@@ -26,6 +25,7 @@ class Tetris {
     this.height = height;
     this.matrix = undefined;
     this.interval = undefined;
+    this.paused = false;
     this.gameOver = false;
 
     document.addEventListener("keydown", this.handleKeyDown);
@@ -40,15 +40,19 @@ class Tetris {
     this.createInterval();
   };
 
+  pause = () => (this.paused = true);
+
+  resume = () => (this.paused = false);
+
   next = () => {
     if (this.gameOver) {
       return;
     }
 
-    const piece = randomPiece();
+    const figure = randomFigure();
 
     this.active = {
-      piece,
+      figure,
       x: 5,
       y: -1,
     };
@@ -118,28 +122,28 @@ class Tetris {
   };
 
   render() {
-    const style = new Style({
+    const style = new CssStyle({
       "grid-template-rows": `repeat(${this.height}, ${POINT_SIZE})`,
       "grid-template-columns": `repeat(${this.width}, ${POINT_SIZE})`,
     });
 
     return `<div class="tetris" id="tetris">
       <div class="background" style="${style}">
-        ${this.renderBoxes()}
+        ${this.renderBackground()}
       </div>
       <div id="matrix" style="${style}"></div>
       <div id="active" style="${style}"></div>
     </div>`;
   }
 
-  renderBoxes() {
-    let boxes = "";
+  renderBackground() {
+    let grid = "";
 
     for (let i = 0; i < this.width * this.height; i++) {
-      boxes = boxes.concat('<span class="box"></span>');
+      grid = grid.concat('<span class="box"></span>');
     }
 
-    return boxes;
+    return grid;
   }
 
   renderMatrix = () => {
@@ -148,7 +152,7 @@ class Tetris {
     this.matrix.forEach((rows, y) => {
       rows.forEach((col, x) => {
         matrix = matrix.concat(
-          `<span style="${new Style({ "background-color": col })}"></span>`
+          `<span style="${new CssStyle({ "background-color": col })}"></span>`
         );
       });
     });
@@ -157,9 +161,9 @@ class Tetris {
   };
 
   renderActive = () => {
-    const { piece, x, y } = this.active;
+    const { figure, x, y } = this.active;
 
-    const element = piece.render(x, y);
+    const element = figure.render(x, y);
 
     document.getElementById("active").innerHTML = element;
   };
@@ -172,6 +176,10 @@ class Tetris {
   };
 
   moveDown = () => {
+    if (this.paused) {
+      return;
+    }
+
     if (this.canMoveDown) {
       this.active.y++;
       this.renderActive();
@@ -184,12 +192,12 @@ class Tetris {
   addToMatrix = () => {
     const { active } = this;
 
-    active.piece.points.forEach((p) => {
+    active.figure.points.forEach((p) => {
       const x = active.x + p.x;
       const y = active.y + p.y;
 
       if (this.isValidCoord(x, y)) {
-        this.matrix[y][x] = active.piece.color;
+        this.matrix[y][x] = active.figure.color;
       }
     });
 
@@ -214,23 +222,29 @@ class Tetris {
   };
 
   rotate = () => {
-    this.active.piece.rotate();
+    if (!this.canRotate) {
+      return;
+    }
 
-    const offsetRight = this.width - (this.active.x + this.active.piece.width);
+    this.active.figure.rotate();
+
+    const offsetRight = this.width - (this.active.x + this.active.figure.width);
 
     if (offsetRight < 0) {
       this.active.x += offsetRight;
     }
   };
 
+  get canRotate() {
+    // @TODO: determine if the figure has space to rotate
+    return true;
+  }
+
   get canMoveLeft() {
     if (
-      this.active.piece.points.every((point) => {
-        return this.isValidCoord(
-          this.active.x + point.x - 1,
-          this.active.y + point.y
-        );
-      })
+      this.active.figure.points.every((point) =>
+        this.isValidCoord(this.active.x + point.x - 1, this.active.y + point.y)
+      )
     ) {
       return true;
     }
@@ -240,12 +254,9 @@ class Tetris {
 
   get canMoveRight() {
     if (
-      this.active.piece.points.every((point) => {
-        return this.isValidCoord(
-          this.active.x + point.x + 1,
-          this.active.y + point.y
-        );
-      })
+      this.active.figure.points.every((point) =>
+        this.isValidCoord(this.active.x + point.x + 1, this.active.y + point.y)
+      )
     ) {
       return true;
     }
@@ -255,12 +266,9 @@ class Tetris {
 
   get canMoveDown() {
     if (
-      this.active.piece.points.every((point) => {
-        return this.isValidCoord(
-          this.active.x + point.x,
-          this.active.y + point.y + 1
-        );
-      })
+      this.active.figure.points.every((point) =>
+        this.isValidCoord(this.active.x + point.x, this.active.y + point.y + 1)
+      )
     ) {
       return true;
     }
@@ -287,30 +295,35 @@ class Tetris {
   isEmpty = (x, y) => !defined(this.matrix[y][x]);
 }
 
-class Piece {
+class Figure {
   constructor(color, points) {
     if (!points || !points.length) {
       throw new Error("Invalid points array.");
     }
 
-    this.color = color;
+    this.color = `var(--${color})`;
     this.points = points;
     this.calculateDimension();
   }
 
   render = (x, y) => {
-    const style = new Style({
+    const style = new CssStyle({
       "grid-template-rows": `repeat(${this.height}, ${POINT_SIZE})`,
       "grid-template-columns": `repeat(${this.width}, ${POINT_SIZE})`,
       ...(defined(x, y) ? { "grid-column": x + 1, "grid-row": y + 1 } : {}),
     });
 
-    return `<div class="piece" style="${style}">
+    return `<div class="figure" style="${style}">
       ${this.points.map((p) => p.render(this.color)).join("")}
     </div>`;
   };
 
   rotate = () => {
+    this.transpose();
+    this.reflectX();
+  };
+
+  transpose = () => {
     this.points.forEach((p) => {
       const { x, y } = p;
       p.x = y;
@@ -318,32 +331,34 @@ class Piece {
     });
 
     this.calculateDimension();
+  };
 
+  reflectX = () => {
     this.points.forEach((p) => {
       p.x = this.width - 1 - p.x;
     });
   };
+
+  calculateDimension = () => {
+    const { height, width } = this.points.reduce(
+      (dim, point) => {
+        if (point.x > dim.width) {
+          dim.width = point.x;
+        }
+
+        if (point.y > dim.height) {
+          dim.height = point.y;
+        }
+
+        return dim;
+      },
+      { height: 0, width: 0 }
+    );
+
+    this.height = height + 1;
+    this.width = width + 1;
+  };
 }
-
-Piece.prototype.calculateDimension = function () {
-  const { height, width } = this.points.reduce(
-    (dim, point) => {
-      if (point.x > dim.width) {
-        dim.width = point.x;
-      }
-
-      if (point.y > dim.height) {
-        dim.height = point.y;
-      }
-
-      return dim;
-    },
-    { height: 0, width: 0 }
-  );
-
-  this.height = height + 1;
-  this.width = width + 1;
-};
 
 class Point {
   constructor(x, y, color) {
@@ -357,11 +372,7 @@ class Point {
   }
 
   render(color) {
-    // if (!defined(color, this.color)) {
-    //   throw new Error("No color defined for point.");
-    // }
-
-    const style = new Style({
+    const style = new CssStyle({
       "background-color": color || this.color,
       "grid-column": this.x + 1,
       "grid-row": this.y + 1,
@@ -373,34 +384,26 @@ class Point {
 
 const p = (x, y) => new Point(x, y);
 
-const createPieces = () => [
-  new Piece(COLORS[0], [p(0, 0), p(0, 1), p(1, 0), p(1, 1)]),
-  new Piece(COLORS[1], [p(0, 0), p(0, 1), p(0, 2), p(0, 3)]),
-  new Piece(COLORS[2], [p(0, 0), p(0, 1), p(1, 1), p(1, 2)]),
-  new Piece(COLORS[3], [p(0, 0), p(0, 1), p(0, 2), p(1, 2)]),
-  new Piece(COLORS[4], [p(1, 0), p(0, 1), p(1, 1), p(2, 1)]),
+const createFigures = () => [
+  new Figure(COLORS[0], [p(0, 0), p(0, 1), p(1, 0), p(1, 1)]),
+  new Figure(COLORS[1], [p(0, 0), p(0, 1), p(0, 2), p(0, 3)]),
+  new Figure(COLORS[2], [p(0, 0), p(0, 1), p(1, 1), p(1, 2)]),
+  new Figure(COLORS[3], [p(0, 0), p(0, 1), p(0, 2), p(1, 2)]),
+  new Figure(COLORS[4], [p(1, 0), p(0, 1), p(1, 1), p(2, 1)]),
 ];
 
-const randomPiece = () => {
-  return pieces[Math.floor(Math.random() * pieces.length)];
+const randomFigure = () => {
+  const figures = createFigures();
+  return figures[Math.floor(Math.random() * figures.length)];
 };
 
-function defined(...values) {
-  return values.every((v) => v !== undefined);
-}
-
-const renderPieces = (pieces) => {
-  const elements = pieces.map((p) => p.render()).join("");
-  document.getElementById("pieces-container").innerHTML = elements;
-};
+const defined = (...values) => values.every((v) => v !== undefined);
 
 const renderTetris = (tetris) => {
   document.getElementById("tetris-container").innerHTML = tetris.render();
 };
 
 const tetris = new Tetris(12, 20);
-const pieces = createPieces();
-// renderPieces(pieces);
 renderTetris(tetris);
 
 const startButton = document.getElementById("start");
@@ -408,6 +411,14 @@ const startButton = document.getElementById("start");
 document
   .getElementById("tetris-container")
   .addEventListener("gameOver", () => (startButton.disabled = false));
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    tetris.pause();
+  } else {
+    tetris.resume();
+  }
+});
 
 startButton.addEventListener("click", (e) => {
   startButton.disabled = true;
