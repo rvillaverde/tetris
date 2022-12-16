@@ -183,30 +183,6 @@ class Matrix {
   isEmpty = (x, y) => !defined(this.matrix[y][x]);
 }
 
-class GameOverScreen {
-  constructor(score) {
-    this.score = score;
-  }
-
-  show = () => this.render();
-
-  render = () => {
-    const element = `<div class="game-over" id="game-over">
-    <div class="content">
-      <h2>Game over!</h2>
-      <p>Your score: ${this.score}</div>
-    </div>
-    </div>`;
-
-    document.getElementById("tetris").innerHTML += element;
-  };
-
-  static hide = () => {
-    const element = document.getElementById("game-over");
-    element && element.remove();
-  };
-}
-
 class Tetris {
   constructor(width, height) {
     if (!defined(width, height)) {
@@ -257,7 +233,7 @@ class Tetris {
     this.next();
     this.createInterval();
 
-    GameOverScreen.hide();
+    gameOverScreen.hide();
 
     document.addEventListener("keydown", this.handleKeyDown);
     document.addEventListener("keyup", this.handleKeyUp);
@@ -288,7 +264,7 @@ class Tetris {
     this.active = undefined;
     this.gameOver = true;
 
-    new GameOverScreen(this.score).show();
+    gameOverScreen.show(this.score);
     const event = new Event("gameOver");
 
     document.removeEventListener("keydown", this.handleKeyDown);
@@ -477,6 +453,24 @@ const defined = (...values) => values.every((v) => v !== undefined);
 
 const renderTetris = (tetris) => {
   document.getElementById("tetris-container").innerHTML = tetris.render();
+};
+
+const gameOverScreen = {
+  id: "game-over",
+  hide() {
+    const element = document.getElementById(this.id);
+    element && element.remove();
+  },
+  show(score) {
+    const element = `<div class="${this.id}" id="${this.id}">
+      <div class="content">
+        <h2>Game over!</h2>
+        <p>Your score: ${score}</div>
+      </div>
+      </div>`;
+
+    document.getElementById("tetris").innerHTML += element;
+  },
 };
 
 const tetris = new Tetris(WIDTH, HEIGHT);
