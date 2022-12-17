@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700;900&family=Space+Mono&display=swap');
 
 * {
   --black: #212529;
@@ -19,6 +19,7 @@
 }
 
 body {
+  color: var(--black);
   background-color: var(--medium-gray);
   font-family: Lato, sans-serif;
   justify-content: center;
@@ -93,6 +94,49 @@ h1 {
   z-index: 0;
 }
 
+.tetris .score-board {
+  margin: 12px;
+}
+
+.tetris .score-board, 
+.tetris .score-board::before {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  right: 0;
+}
+
+.tetris .score-board::before {
+  background-color: var(--white);
+  content: "";
+  display: block;
+  opacity: 70%;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.tetris .score-board .content {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.tetris .score-board .content h3,
+.tetris .score-board .content p {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  margin: 0;
+}
+
+.tetris .score-board .content h3{
+  text-transform: uppercase;
+}
+
 .tetris .game-over {
   align-items: center;
   display: flex;
@@ -102,7 +146,7 @@ h1 {
   z-index: 8;
 }
 
-.tetris .game-over:before {
+.tetris .game-over::before {
   background-color: var(--white);
   content: "";
   display: block;

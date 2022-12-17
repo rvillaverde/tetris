@@ -1,11 +1,15 @@
 const COLORS = ["color-1", "color-2", "color-3", "color-4", "color-5"];
 
 const POINT_SIZE = "var(--point-size)";
-const INTERVAL = 750;
+const MAX_INTERVAL = 750;
+const MIN_INTERVAL = 200;
 const SCORE_MULTIPLIER = 10;
+const LEVEL_BREAKPOINT = 100;
 
 const WIDTH = 12;
 const HEIGHT = 20;
+
+const startButton = document.getElementById("start");
 
 class CssStyle {
   constructor(style) {
@@ -196,6 +200,8 @@ class Tetris {
     this.interval = undefined;
     this.paused = false;
     this.gameOver = false;
+
+    this.render();
   }
 
   get canRotate() {
@@ -215,6 +221,14 @@ class Tetris {
     return this.canMove("down");
   }
 
+  get speed() {
+    if (this.level === 1) {
+      return MAX_INTERVAL;
+    }
+
+    return MAX_INTERVAL / this.level ** 2 + MIN_INTERVAL;
+  }
+
   canMove = (direction) => {
     const x =
       this.active.x +
@@ -229,11 +243,13 @@ class Tetris {
   start = () => {
     this.matrix = new Matrix(this.width, this.height);
     this.score = 0;
+    this.level = 1;
     this.gameOver = false;
     this.next();
-    this.createInterval();
+    this.setInterval();
 
     gameOverScreen.hide();
+    scoreBoard.reset();
 
     document.addEventListener("keydown", this.handleKeyDown);
     document.addEventListener("keyup", this.handleKeyUp);
@@ -313,7 +329,7 @@ class Tetris {
 
     switch (e.code) {
       case "ArrowDown":
-        this.createInterval();
+        this.setInterval();
       default:
         return;
     }
@@ -325,13 +341,18 @@ class Tetris {
       "grid-template-columns": `repeat(${this.width}, ${POINT_SIZE})`,
     });
 
-    return `<div class="tetris" id="tetris">
-      <div class="background" style="${style}">
-        ${this.renderBackground()}
+    const element = `
+      <div class="tetris" id="tetris">
+        <div class="background" style="${style}">
+          ${this.renderBackground()}
+        </div>
+        <div id="matrix" style="${style}"></div>
+        <div id="active" style="${style}"></div>
+        ${scoreBoard.init()}
       </div>
-      <div id="matrix" style="${style}"></div>
-      <div id="active" style="${style}"></div>
-    </div>`;
+    `;
+
+    document.getElementById("tetris-container").innerHTML = element;
   }
 
   renderBackground() {
@@ -352,7 +373,13 @@ class Tetris {
     document.getElementById("active").innerHTML = element;
   };
 
-  createInterval = () => (this.interval = setInterval(this.moveDown, INTERVAL));
+  setInterval = () => {
+    if (this.interval) {
+      this.clearInterval();
+    }
+
+    this.interval = setInterval(this.moveDown, this.speed);
+  };
 
   clearInterval = () => {
     clearInterval(this.interval);
@@ -360,7 +387,7 @@ class Tetris {
   };
 
   moveDown = () => {
-    if (this.paused) {
+    if (this.paused || !defined(this.active)) {
       return;
     }
 
@@ -426,10 +453,24 @@ class Tetris {
       return;
     }
 
-    const { score } = this;
+    const { score: oldScore } = this;
 
     const extra = rows === 4 ? 2 : rows === 3 ? 1 : rows === 2 ? 0.5 : 0;
     this.score += (rows + extra) * SCORE_MULTIPLIER;
+
+    scoreBoard.update(this.score);
+    this.updateLevel(oldScore);
+  };
+
+  updateLevel = (oldScore) => {
+    const hasLevelChanged =
+      Math.floor(this.score / LEVEL_BREAKPOINT) >
+      Math.floor(oldScore / LEVEL_BREAKPOINT);
+
+    if (hasLevelChanged) {
+      this.level++;
+      this.setInterval();
+    }
   };
 }
 
@@ -451,10 +492,6 @@ const randomFigure = () => {
 
 const defined = (...values) => values.every((v) => v !== undefined);
 
-const renderTetris = (tetris) => {
-  document.getElementById("tetris-container").innerHTML = tetris.render();
-};
-
 const gameOverScreen = {
   id: "game-over",
   hide() {
@@ -467,25 +504,42 @@ const gameOverScreen = {
         <h2>Game over!</h2>
         <p>Your score: ${score}</div>
       </div>
-      </div>`;
+    </div>`;
 
     document.getElementById("tetris").innerHTML += element;
   },
 };
 
-const tetris = new Tetris(WIDTH, HEIGHT);
-renderTetris(tetris);
+const scoreBoard = {
+  id: "score-board",
+  init() {
+    return `<div class="${this.id}" id="${this.id}">
+      <div class="content">
+        <h3>Score</h3>
+        <p>${this.format(0)}</div>
+      </div>
+    </div>`;
+  },
+  format: (score) => String(score).padStart(5, "0"),
+  reset() {
+    this.update(0);
+  },
+  update(score) {
+    document.getElementById(this.id).querySelector(".content p").textContent =
+      this.format(score);
+  },
+};
 
-const startButton = document.getElementById("start");
+const toggleStartButton = (disabled) => (startButton.disabled = disabled);
 
 startButton.addEventListener("click", () => {
-  startButton.disabled = true;
+  toggleStartButton(true);
   tetris.start();
 });
 
 document
   .getElementById("tetris-container")
-  .addEventListener("gameOver", () => (startButton.disabled = false));
+  .addEventListener("gameOver", () => toggleStartButton(false));
 
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
@@ -494,3 +548,5 @@ document.addEventListener("visibilitychange", () => {
     tetris.resume();
   }
 });
+
+const tetris = new Tetris(WIDTH, HEIGHT);
