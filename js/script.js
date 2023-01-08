@@ -421,19 +421,6 @@ class Tetris {
     this.active = undefined;
   };
 
-  validateMatrix = () => {
-    const result = this.matrix.validate();
-
-    if (!result) {
-      this.stop();
-      return alert(`Game over! Your score: ${this.score}`);
-    }
-
-    const { rows } = result;
-
-    this.updateScore(rows);
-  };
-
   rotate = () => {
     if (!this.canRotate) {
       return;
